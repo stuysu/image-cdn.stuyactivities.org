@@ -47,7 +47,7 @@ app.use(async (req, res) => {
     );
 
     await downloadImage(cloudinaryUrl, filename);
-    res.set('Cache-control', 'public, max-age=604800')
+    res.set('Cache-control', 'public, max-age=604800');
     return res.sendFile(filename);
   } catch (e) {}
 
