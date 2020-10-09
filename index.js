@@ -36,6 +36,7 @@ app.use(async (req, res) => {
 
   try {
     await fs.promises.stat(filename);
+    res.set('Cache-control', 'public, max-age=604800')
     return res.sendFile(filename);
   } catch (e) {}
 
@@ -46,6 +47,7 @@ app.use(async (req, res) => {
     );
 
     await downloadImage(cloudinaryUrl, filename);
+    res.set('Cache-control', 'public, max-age=604800')
     return res.sendFile(filename);
   } catch (e) {}
 
