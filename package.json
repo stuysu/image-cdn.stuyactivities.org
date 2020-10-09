@@ -15,5 +15,11 @@
     "express": "^4.17.1",
     "prettier": "^2.1.2",
     "url-join": "^4.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  },
+  "engines": {
+    "node": "14.x"
   }
 }
