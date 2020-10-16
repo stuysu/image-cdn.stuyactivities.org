@@ -6,6 +6,7 @@ const path = require("path");
 const axios = require("axios");
 const urlJoin = require("url-join");
 
+const images = {};
 async function downloadImage(url, filename) {
   // axios image download with response type "stream"
   const response = await axios({
@@ -14,11 +15,12 @@ async function downloadImage(url, filename) {
     responseType: "stream",
   });
 
+
   response.data.pipe(fs.createWriteStream(filename));
 
   return new Promise((resolve, reject) => {
     response.data.on("end", () => {
-      resolve();
+      resolve(response.headers['content-type']);
     });
 
     response.data.on("error", () => {
@@ -37,6 +39,7 @@ app.use(async (req, res) => {
   try {
     await fs.promises.stat(filename);
     res.set('Cache-control', 'public, max-age=604800')
+    res.set("Content-Type", images[hash]);
     return res.sendFile(filename);
   } catch (e) {}
 
@@ -46,7 +49,9 @@ app.use(async (req, res) => {
       req.path
     );
 
-    await downloadImage(cloudinaryUrl, filename);
+    const type = await downloadImage(cloudinaryUrl, filename);
+    images[hash] = type;
+    res.set("Content-Type", type);
     res.set('Cache-control', 'public, max-age=604800');
     return res.sendFile(filename);
   } catch (e) {}
