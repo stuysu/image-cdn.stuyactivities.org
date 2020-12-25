@@ -5,58 +5,80 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const urlJoin = require("url-join");
+const minio = require("minio");
+
+const client = new minio.Client({
+  endPoint: process.env.MINIO_ENDPOINT,
+  port: process.env.MINIO_PORT,
+  useSSL: process.env.MINIO_USE_SSL,
+  accessKey: process.env.MINIO_ACCESS_KEY,
+  secretKey: process.env.MINIO_SECRET_KEY,
+});
 
 const images = {};
-async function downloadImage(url, filename) {
-  // axios image download with response type "stream"
-  const response = await axios({
-    method: "GET",
-    url: url,
-    responseType: "stream",
-  });
-
-
-  response.data.pipe(fs.createWriteStream(filename));
-
-  return new Promise((resolve, reject) => {
-    response.data.on("end", () => {
-      resolve(response.headers['content-type']);
+function downloadImage(url, filename) {
+  return new Promise(async (resolve) => {
+    // axios image download with response type "stream"
+    const response = await axios({
+      method: "GET",
+      url: url,
+      responseType: "stream",
     });
 
-    response.data.on("error", () => {
-      reject();
-    });
+    client.putObject(
+      "stuyactivities",
+      filename,
+      response.data,
+      response.headers,
+      (er) => {
+        if (er) {
+          console.log(er);
+          throw er;
+        }
+        resolve();
+      }
+    );
   });
 }
 
+const objectSet = new Set();
+
+const stream = client.listObjects("stuyactivities", "", true);
+
+stream.on("data", (obj) => objectSet.add(obj.name));
+
 app.use(async (req, res) => {
-  const hash = crypto.createHash("sha256").update(req.path).digest("hex");
+  if (req.path.startsWith("/")) {
+    req.path = req.path.replace("/", "");
+  }
+  let p = req.path.replace("/", "");
 
-  const info = path.parse(req.path);
+  const info = path.parse(p);
 
-  const filename = path.resolve(__dirname, "image", hash + info.ext);
+  if (!info.ext) {
+    p += ".png";
+  }
 
-  try {
-    await fs.promises.stat(filename);
-    res.set('Cache-control', 'public, max-age=604800')
-    res.set("Content-Type", images[hash]);
-    return res.sendFile(filename);
-  } catch (e) {}
-
-  try {
+  if (!objectSet.has(p)) {
     const cloudinaryUrl = urlJoin(
       "https://res.cloudinary.com/stuyactivities/",
-      req.path
+      p
     );
 
-    const type = await downloadImage(cloudinaryUrl, filename);
-    images[hash] = type;
-    res.set("Content-Type", type);
-    res.set('Cache-control', 'public, max-age=604800');
-    return res.sendFile(filename);
-  } catch (e) {}
+    await downloadImage(cloudinaryUrl, p);
+  }
 
-  res.status(404).send("That image could not be found");
+  const now = new Date();
+  const round = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  client.presignedUrl(
+    "GET",
+    "stuyactivities",
+    p,
+    60 * 60 * 24 * 7,
+    round,
+    (er, url) => res.redirect(url)
+  );
 });
 
 const port = Number(process.env.PORT) || 3002;
