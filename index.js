@@ -15,6 +15,8 @@ const client = new minio.Client({
   secretKey: process.env.MINIO_SECRET_KEY,
 });
 
+const object = process.env.MINIO_OBJECT || "stuyactivities";
+
 const images = {};
 function downloadImage(url, filename) {
   return new Promise(async (resolve) => {
@@ -26,7 +28,7 @@ function downloadImage(url, filename) {
     });
 
     client.putObject(
-      "stuyactivities",
+      object,
       filename,
       response.data,
       response.headers,
@@ -43,7 +45,7 @@ function downloadImage(url, filename) {
 
 const objectSet = new Set();
 
-const stream = client.listObjects("stuyactivities", "", true);
+const stream = client.listObjects(object, "", true);
 
 stream.on("data", (obj) => objectSet.add(obj.name));
 
@@ -73,7 +75,7 @@ app.use(async (req, res) => {
 
   client.presignedUrl(
     "GET",
-    "stuyactivities",
+    object,
     p,
     60 * 60 * 24 * 7,
     round,
