@@ -17,6 +17,19 @@ const client = new minio.Client({
 
 const object = process.env.MINIO_OBJECT || "stuyactivities";
 
+client.bucketExists(object, (err, exists) => {
+	if (err) {
+		return console.log(err);
+	}
+	if (exists) {
+		return console.log("OK!");
+	}
+	else {
+		console.log("Creating bucket " + object);
+		client.makeBucket(object);
+	}
+})
+
 const images = {};
 function downloadImage(url, filename) {
   return new Promise(async (resolve) => {
