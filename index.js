@@ -22,10 +22,10 @@ client.bucketExists(object, (err, exists) => {
 		return console.log("OK!");
 	}
 	if (err) {
-		console.log(err);
+		console.log("NOT OK!", err);
 	}
 	console.log("Creating bucket " + object);
-	client.makeBucket(object);
+	client.makeBucket(object, "eu-east-1");
 	return null;
 })
 
